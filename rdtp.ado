@@ -1,4 +1,4 @@
-*! rdtp v1.0.0  23feb2026
+*! rdtp v1.0.1  23feb2026
 *! RD Tipping-Point Search for Discrete Forcing Variables
 *! Andrew McEachin
 *! Based on McEachin, Domina, & Penner (2020, JPAM)

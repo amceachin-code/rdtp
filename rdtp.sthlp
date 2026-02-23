@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.0.0  23feb2026}{...}
+{* *! version 1.0.1  23feb2026}{...}
 {vieweralsosee "[R] regress" "help regress"}{...}
 {viewerjumpto "Syntax" "rdtp##syntax"}{...}
 {viewerjumpto "Description" "rdtp##description"}{...}
