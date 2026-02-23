@@ -28,9 +28,8 @@ where `cut = 1(forcing >= c)` and `force = forcing - c`, using only observations
 
 | File | Lines | Description |
 |------|------:|-------------|
-| `rdtp.ado` | 535 | Main Stata command |
-| `rdtp.sthlp` | 362 | Stata help file (viewable with `help rdtp`) |
-| `RD_algorithm_para_school_linear_spline_RR1.do` | -- | Original do-file (reference only; not needed at runtime) |
+| `rdtp.ado` | 612 | Main Stata command |
+| `rdtp.sthlp` | 389 | Stata help file (viewable with `help rdtp`) |
 | `README.md` | -- | This file |
 | `PROGRESS.md` | -- | Development log |
 
@@ -67,7 +66,7 @@ rdtp depvar forcingvar [if] [in], by(varname) [options]
 | Option | Default | Description |
 |--------|---------|-------------|
 | `bandwidth(#)` | 75 | Symmetric bandwidth around each candidate cutoff |
-| `searchrange(# #)` | all unique values | Restrict candidate cutoffs to [min, max] (integers) |
+| `searchrange(# #)` | all unique values | Restrict candidate cutoffs to [min, max] |
 | `minobs(#)` | 10 | Minimum observations required on each side of a candidate cutoff |
 | `vce(vcetype)` | OLS | Variance estimator passed to `regress` (e.g., `robust`, `cluster varname`) |
 | `saving(filename)` | -- | Save per-unit results to a `.dta` file |

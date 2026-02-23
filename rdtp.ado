@@ -29,7 +29,7 @@ program define rdtp, rclass
     syntax varlist(min=2 max=2 numeric) [if] [in], ///
         BY(varname)                                  ///
         [BANDwidth(real 75)                          ///
-         SEARCHRange(numlist min=2 max=2 integer)    ///
+         SEARCHRange(numlist min=2 max=2)             ///
          MINobs(integer 10)                          ///
          vce(string)                                 ///
          SAVing(string)                              ///
@@ -146,6 +146,83 @@ program define rdtp, rclass
         double  pred_left                      ///
         double  pred_right                     ///
         using `"`resultsfile'"'
+
+    // ─────────────────────────────────────────────────────────────────────
+    // VCE pre-validation
+    //   If the user specified vce(), run a test regression on the first
+    //   unit's data to catch invalid specifications (e.g., a misspelled
+    //   cluster variable) before entering the main loop.  Without this
+    //   check, every unit silently fails via `capture regress` and the
+    //   user gets n_found = 0 with no useful error message.
+    // ─────────────────────────────────────────────────────────────────────
+
+    if `"`vce'"' != "" {
+        // Grab the first unit identifier
+        local first_unit : word 1 of `units'
+
+        preserve
+
+        // Subset to the first unit's estimation-sample data
+        if `by_is_string' {
+            quietly keep if `by' == `"`first_unit'"' & `touse'
+        }
+        else {
+            quietly keep if `by' == `first_unit' & `touse'
+        }
+
+        // Get the first candidate cutoff for this unit
+        if "`searchrange'" != "" {
+            quietly levelsof `forcing' ///
+                if `forcing' >= `sr_min' & `forcing' <= `sr_max', ///
+                local(test_candidates)
+        }
+        else {
+            quietly levelsof `forcing', local(test_candidates)
+        }
+        local test_c : word 1 of `test_candidates'
+
+        if "`test_c'" != "" {
+            // Construct RD variables at this candidate cutoff
+            tempvar _tcut _tfrc _tint
+            quietly gen byte   `_tcut' = (`forcing' >= `test_c') ///
+                if !missing(`forcing')
+            quietly gen double `_tfrc' = `forcing' - `test_c'    ///
+                if !missing(`forcing')
+            quietly gen double `_tint' = `_tcut' * `_tfrc'
+
+            capture regress `depvar' `_tcut' `_tfrc' `_tint' ///
+                if abs(`_tfrc') <= `bandwidth', `vce_clause'
+
+            if _rc != 0 {
+                local vce_rc = _rc
+                restore
+                postclose `pf'
+                di as error ///
+                    "vce(`vce') failed on test regression (error code `vce_rc')."
+                di as error ///
+                    "Check that all variable names in vce() exist and are spelled correctly."
+                exit `vce_rc'
+            }
+        }
+        else {
+            // First unit had no candidates in search range — fall back
+            // to a simple regress on whatever data we have, just to
+            // validate that Stata accepts the vce() specification.
+            capture regress `depvar' `forcing', `vce_clause'
+            if _rc != 0 {
+                local vce_rc = _rc
+                restore
+                postclose `pf'
+                di as error ///
+                    "vce(`vce') failed on test regression (error code `vce_rc')."
+                di as error ///
+                    "Check that all variable names in vce() exist and are spelled correctly."
+                exit `vce_rc'
+            }
+        }
+
+        restore
+    }
 
     // ─────────────────────────────────────────────────────────────────────
     // Display header
@@ -282,13 +359,20 @@ program define rdtp, rclass
 
             // ·· Skip degenerate regressions ··
             //    - Missing F → model not identified (e.g., too few clusters)
-            //    - β₁ = 0   → variable dropped (collinearity) or no jump
+            //    - β₁ = 0   → Stata sets _b[varname] = 0 when a variable
+            //      is dropped due to collinearity, which is the only
+            //      realistic way this exact-zero condition triggers.
+            //      A numerically estimated coefficient is essentially
+            //      never exactly 0.0 in floating point.
             if missing(e(F)) | _b[`_cut'] == 0 {
                 drop `_cut' `_frc' `_int'
                 continue
             }
 
             // ·· Update best if this R² is the new maximum ··
+            //    Tie-breaking: strict > means the first candidate
+            //    (lowest forcing value, since levelsof returns sorted)
+            //    wins when two cutoffs produce identical R².
             if e(r2) > `best_r2' {
                 local best_r2     = e(r2)
                 local best_cutoff = `c'
@@ -369,24 +453,8 @@ program define rdtp, rclass
     // ── Build the results matrix (n_units × 10) ──────────────────────
     local nrows = _N
     tempname rmat
-    matrix `rmat' = J(`nrows', 10, .)
-
-    forvalues i = 1/`nrows' {
-        matrix `rmat'[`i', 1]  = cutoff[`i']
-        matrix `rmat'[`i', 2]  = r2[`i']
-        matrix `rmat'[`i', 3]  = beta[`i']
-        matrix `rmat'[`i', 4]  = se[`i']
-        matrix `rmat'[`i', 5]  = tstat[`i']
-        matrix `rmat'[`i', 6]  = n_left[`i']
-        matrix `rmat'[`i', 7]  = n_right[`i']
-        matrix `rmat'[`i', 8]  = n_total[`i']
-        matrix `rmat'[`i', 9]  = pred_left[`i']
-        matrix `rmat'[`i', 10] = pred_right[`i']
-    }
-
-    // Label columns
-    matrix colnames `rmat' = cutoff r2 beta se tstat ///
-        n_left n_right n_total pred_left pred_right
+    mkmat cutoff r2 beta se tstat n_left n_right n_total ///
+        pred_left pred_right, matrix(`rmat')
 
     // Label rows with (cleaned) unit identifiers
     //   Stata matrix row names: max 32 chars, no spaces

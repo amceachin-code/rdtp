@@ -156,9 +156,9 @@ are included in the regression.  Default is {cmd:75}.
 
 {phang}
 {opt searchrange(# #)} restricts the set of candidate cutoffs to values
-of {it:forcingvar} in [{it:min}, {it:max}].  Both endpoints must be
-integers and {it:min} < {it:max}.  If not specified, all unique values of
-{it:forcingvar} (within the unit's data) are considered.
+of {it:forcingvar} in [{it:min}, {it:max}].  {it:min} < {it:max} is
+required.  Endpoints may be integers or non-integers.  If not specified,
+all unique values of {it:forcingvar} (within the unit's data) are considered.
 {p_end}
 
 {phang}
@@ -249,6 +249,28 @@ Columns of {cmd:r(results)}:
 
 {marker examples}{...}
 {title:Examples}
+
+    {hline}
+{pstd}Self-contained example with synthetic data{p_end}
+
+{pstd}
+This example generates a dataset of 5 schools (100 students each), where
+each school has a different true cutoff on a discrete test-score variable.
+Run this directly from {cmd:help rdtp} to see {cmd:rdtp} recover the
+cutoffs.{p_end}
+
+{phang2}{cmd:. * Generate synthetic data for demonstration}{p_end}
+{phang2}{cmd:. clear}{p_end}
+{phang2}{cmd:. set seed 12345}{p_end}
+{phang2}{cmd:. set obs 500}{p_end}
+{phang2}{cmd:. gen school = ceil(_n / 100)}{p_end}
+{phang2}{cmd:. gen test_score = 200 + int(runiform() * 301)}{p_end}
+{phang2}{cmd:. * Each school has a different placement cutoff}{p_end}
+{phang2}{cmd:. gen true_cutoff = cond(school==1, 300, cond(school==2, 350, cond(school==3, 400, cond(school==4, 325, 375))))}{p_end}
+{phang2}{cmd:. gen above = (test_score >= true_cutoff)}{p_end}
+{phang2}{cmd:. gen outcome = 50 + 0.1 * test_score + 10 * above + rnormal(0, 5)}{p_end}
+{phang2}{cmd:. * Run rdtp to recover the cutoffs}{p_end}
+{phang2}{cmd:. rdtp outcome test_score, by(school) searchrange(250 450) noisily}{p_end}
 
     {hline}
 {pstd}Basic usage{p_end}
