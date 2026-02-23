@@ -31,7 +31,6 @@ where `cut = 1(forcing >= c)` and `force = forcing - c`, using only observations
 | `rdtp.ado` | 612 | Main Stata command |
 | `rdtp.sthlp` | 389 | Stata help file (viewable with `help rdtp`) |
 | `README.md` | -- | This file |
-| `PROGRESS.md` | -- | Development log |
 
 ## Installation
 
