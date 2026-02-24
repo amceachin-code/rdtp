@@ -1,6 +1,24 @@
+# Stata
 *.log
 *.smcl
 *.dta
-.DS_Store
 RD_algorithm_para_school_linear_spline_RR1.do
+
+# R
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+*.o
+*.so
+*.dll
+R/src/*.o
+R/src/*.so
+R/src/*.dll
+R/inst/doc
+
+# OS
+.DS_Store
+
+# Project
 PROGRESS.md

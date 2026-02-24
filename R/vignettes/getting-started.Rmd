@@ -1,0 +1,199 @@
+---
+title: "Getting Started with rdtp"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting Started with rdtp}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 6,
+  fig.height = 4
+)
+```
+
+## Overview
+
+`rdtp` searches over candidate cutoff values on a discrete forcing (running)
+variable to find, for each unit, the cutoff that maximizes R-squared from a
+linear-spline regression discontinuity (RD) regression. This is the first step
+of a "tipping-point" analysis: identifying where each unit (e.g., school,
+county, hospital) appears to impose a threshold on a test score or other
+discrete assignment variable.
+
+The method is based on McEachin, Domina, and Penner (2020, *JPAM*). See also
+Hansen (2000, *Econometrica*) for the econometric foundations of threshold
+detection.
+
+## Installation
+
+```{r install, eval = FALSE}
+# Install from GitHub (when available):
+# remotes::install_github("amceachin-code/rdtp")
+
+# Or install from local source:
+# install.packages("path/to/rdtp", repos = NULL, type = "source")
+```
+
+## Synthetic Data Example
+
+We generate data for 5 schools, each with 100 students and a different true
+cutoff on a discrete test-score variable. A positive discontinuity of +20
+points is applied at each school's cutoff.
+
+```{r generate-data}
+library(rdtp)
+
+set.seed(12345)
+n <- 500
+
+dat <- data.frame(
+  school     = rep(1:5, each = 100),
+  test_score = 200 + sample(0:300, n, replace = TRUE)
+)
+
+# True cutoffs: 300, 350, 400, 325, 375
+true_cuts <- c(300, 350, 400, 325, 375)
+dat$above <- as.integer(dat$test_score >= true_cuts[dat$school])
+dat$outcome <- 50 + 0.1 * dat$test_score + 20 * dat$above + rnorm(n, 0, 3)
+```
+
+## Running the Search
+
+```{r basic-run}
+fit <- rdtp(dat,
+            depvar      = "outcome",
+            forcing     = "test_score",
+            by          = "school",
+            searchrange = c(250, 450))
+```
+
+## Viewing Results
+
+```{r print}
+print(fit)
+```
+
+The `summary()` method provides distributional statistics:
+
+```{r summary}
+summary(fit)
+```
+
+## Plotting
+
+Three plot types are available: `"cutoffs"`, `"r2"`, and `"beta"`.
+
+```{r plot-cutoffs}
+plot(fit, type = "cutoffs")
+```
+
+```{r plot-r2}
+plot(fit, type = "r2")
+```
+
+```{r plot-beta}
+plot(fit, type = "beta")
+```
+
+## Options
+
+### Bandwidth
+
+The `bandwidth` parameter sets the symmetric bandwidth around each candidate
+cutoff. Only observations with `|forcing - c| <= bandwidth` enter the
+regression. Default is 75.
+
+```{r bandwidth}
+fit_narrow <- rdtp(dat,
+                   depvar    = "outcome",
+                   forcing   = "test_score",
+                   by        = "school",
+                   bandwidth = 50,
+                   searchrange = c(250, 450))
+fit_narrow
+```
+
+### Robust Standard Errors
+
+Use `vce = "robust"` for heteroskedasticity-robust (HC1) standard errors.
+Requires the `sandwich` package.
+
+```{r robust, eval = requireNamespace("sandwich", quietly = TRUE)}
+fit_rob <- rdtp(dat,
+                depvar  = "outcome",
+                forcing = "test_score",
+                by      = "school",
+                vce     = "robust",
+                searchrange = c(250, 450))
+fit_rob$results[, c("unit", "beta", "se")]
+```
+
+### Cluster-Robust Standard Errors
+
+Use `vce = "cluster"` with the `cluster` argument. Requires the `sandwich`
+package.
+
+```{r cluster, eval = requireNamespace("sandwich", quietly = TRUE)}
+dat$classroom <- rep(1:25, each = 20)
+
+fit_cl <- rdtp(dat,
+               depvar  = "outcome",
+               forcing = "test_score",
+               by      = "school",
+               vce     = "cluster",
+               cluster = "classroom",
+               searchrange = c(250, 450))
+fit_cl$results[, c("unit", "beta", "se")]
+```
+
+### Saving Results
+
+Save results to `.rds` or `.csv`:
+
+```{r saving, eval = FALSE}
+fit <- rdtp(dat,
+            depvar  = "outcome",
+            forcing = "test_score",
+            by      = "school",
+            saving  = "my_results.rds")
+
+# Or CSV:
+fit <- rdtp(dat,
+            depvar  = "outcome",
+            forcing = "test_score",
+            by      = "school",
+            saving  = "my_results.csv")
+```
+
+### Verbose Output
+
+Set `verbose = TRUE` to see per-unit progress:
+
+```{r verbose, eval = FALSE}
+fit <- rdtp(dat,
+            depvar  = "outcome",
+            forcing = "test_score",
+            by      = "school",
+            verbose = TRUE,
+            searchrange = c(250, 450))
+```
+
+## References
+
+- McEachin, A., T. Domina, and A. Penner. 2020. "Heterogeneous effects of
+  early algebra across California middle schools." *Journal of Policy Analysis
+  and Management* 39(3): 772-800.
+  [doi:10.1002/pam.22202](https://doi.org/10.1002/pam.22202)
+
+- Hansen, B. E. 2000. "Sample splitting and threshold estimation."
+  *Econometrica* 68(3): 575-603.
+  [doi:10.1111/1468-0262.00124](https://doi.org/10.1111/1468-0262.00124)
+
+- Lee, D. S., and T. Lemieux. 2010. "Regression discontinuity designs in
+  economics." *Journal of Economic Literature* 48(2): 281-355.
+  [doi:10.1257/jel.48.2.281](https://doi.org/10.1257/jel.48.2.281)

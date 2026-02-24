@@ -1,0 +1,24 @@
+Package: rdtp
+Title: RD Tipping-Point Cutoff Search for Discrete Forcing Variables
+Version: 1.0.0
+Authors@R: person("Andrew", "McEachin", role = c("aut", "cre"),
+                  email = "andrew.mceachin@gmail.com")
+Description: Searches over candidate cutoff values on a discrete running
+    variable to find, for each unit, the cutoff that maximizes R-squared
+    from a linear-spline regression discontinuity (RD) regression.
+    Implements the threshold-detection method from McEachin, Domina, and
+    Penner (2020, <doi:10.1002/pam.22202>) for settings where the true
+    cutoff is unknown and varies across units (e.g., schools, counties).
+    Supports OLS, heteroskedasticity-robust, and cluster-robust standard
+    errors. Depends only on base R; robust/cluster SEs use 'sandwich'
+    when available.
+License: GPL (>= 3) + file LICENSE
+URL: https://github.com/amceachin-code/rdtp
+BugReports: https://github.com/amceachin-code/rdtp/issues
+Encoding: UTF-8
+Depends: R (>= 3.5.0)
+Imports: stats
+Suggests: sandwich, testthat (>= 3.0.0), knitr, rmarkdown
+RoxygenNote: 7.3.3
+VignetteBuilder: knitr
+Config/testthat/edition: 3
